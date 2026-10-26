@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Revit 2025+ runs on .NET; Revit 2027 needs net10. Same sources as the Revit 2021 project in the parent folder. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <!-- Revit's API DLLs reference the Windows Desktop System.Drawing / Microsoft.VisualBasic; avoids MSB3277 -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <PlatformTarget>x64</PlatformTarget>
+    <AssemblyName>ConvertCAD</AssemblyName>
+    <RootNamespace>ConvertCAD</RootNamespace>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <RevitPath>C:\Program Files\Autodesk\Revit 2027</RevitPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\ConvertCAD2Revit.cs;..\Ribbon.cs;..\Lang.cs;..\Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="..\Icons\*.png" LogicalName="ConvertCAD.Icons.%(Filename)%(Extension)" />
+    <None Include="ConvertCAD.addin" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="RevitAPI">
+      <HintPath>$(RevitPath)\RevitAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>$(RevitPath)\RevitAPIUI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

@@ -24,7 +24,7 @@ namespace ConvertCAD
 
             Reference refer = uidoc.Selection.PickObject(
                 ObjectType.Element,
-                "选择CAD链接图层");   // 拾取CAD链接
+                Lang.T("Select a layer in the linked CAD", "اختر طبقة من ملف الكاد المرتبط"));   // 拾取CAD链接
 
             Element element = document.GetElement(refer);
             GeometryObject geoObj = element.GetGeometryObjectFromReference(refer);
@@ -58,43 +58,27 @@ namespace ConvertCAD
             foreach (Category subCategory in cadLinkCategory.SubCategories)
             {
                 // 匹配各图层名称
-                if (("墙" == subCategory.Name) ||
-                    ("WALL" == subCategory.Name) ||
-                    ("Wall" == subCategory.Name) ||
-                    ("wall" == subCategory.Name))
+                if (LayerIs(subCategory.Name, "墙", "wall", "حوائط", "حائط", "جدار"))
                 {
                     wallsCategory = subCategory;
                 }
 
-                if (("门" == subCategory.Name) ||
-                    ("DOOR" == subCategory.Name) ||
-                    ("Door" == subCategory.Name) ||
-                    ("door" == subCategory.Name))
+                if (LayerIs(subCategory.Name, "门", "door", "أبواب", "باب"))
                 {
                     doorsCategory = subCategory;
                 }
 
-                if (("窗" == subCategory.Name) ||
-                    ("WINDOW" == subCategory.Name) ||
-                    ("Window" == subCategory.Name) ||
-                    ("window" == subCategory.Name))
+                if (LayerIs(subCategory.Name, "窗", "window", "شبابيك", "شباك", "نوافذ", "نافذة"))
                 {
                     windowsCategory = subCategory;
                 }
 
-                if (("轴线" == subCategory.Name) ||
-                    ("AXIS" == subCategory.Name) ||
-                    ("Axis" == subCategory.Name) ||
-                    ("axis" == subCategory.Name))
+                if (LayerIs(subCategory.Name, "轴线", "axis", "محاور", "محور"))
                 {
                     axesCategory = subCategory;
                 }
 
-                if (("柱" == subCategory.Name) ||
-                    ("柱子" == subCategory.Name) ||
-                    ("COLUMN" == subCategory.Name) ||
-                    ("Column" == subCategory.Name) ||
-                    ("column" == subCategory.Name))
+                if (LayerIs(subCategory.Name, "柱", "柱子", "column", "أعمدة", "عمود"))
                 {
                     columnsCategory = subCategory;
                 }
@@ -102,18 +86,18 @@ namespace ConvertCAD
 
             GeometryElement geometryElement = element.get_Geometry(new Options()); // 获取主图元
 
-            Transaction trans = new Transaction(document, "生成柱");
+            Transaction trans = new Transaction(document, Lang.T("Create Columns", "إنشاء أعمدة"));
             trans.Start();
             Level level = document.ActiveView.GenLevel;
             foreach (GeometryObject gObj in geometryElement)
             {
                 //只取第一个元素
                 GeometryInstance geomInstance = gObj as GeometryInstance;
-                Transform totalTransform = geomInstance.Transform;
-
-                foreach (var insObj in geomInstance.SymbolGeometry)
+                if (geomInstance == null) continue;
+                foreach (var (insObj, totalTransform) in CadGeometry.Flatten(geomInstance.SymbolGeometry, geomInstance.Transform))
                 {
-                    Category insCategory = (document.GetElement(insObj.GraphicsStyleId) as GraphicsStyle).GraphicsStyleCategory;
+                    Category insCategory = CadGeometry.CategoryOf(document, insObj);
+                    if (insCategory == null) continue;
                     if (wallsCategory != null && wallsCategory.Id == insCategory.Id)
                     {
                         if (insObj.GetType().ToString() == "Autodesk.Revit.DB.PolyLine")
@@ -128,9 +112,8 @@ namespace ConvertCAD
                                     ));
                             }
                         }
-                        else
+                        else if (insObj is Line line) // skip arcs, circles, text on the same layer
                         {
-                            Line line = insObj as Line;
                             wallsObjs.Add(
                                 Line.CreateBound(
                                     totalTransform.OfPoint(line.GetEndPoint(0)),
@@ -153,9 +136,8 @@ namespace ConvertCAD
                                     ));
                             }
                         }
-                        else
+                        else if (insObj is Line line) // skip arcs, circles, text on the same layer
                         {
-                            Line line = insObj as Line;
                             windowsObjs.Add(
                                 Line.CreateBound(
                                     totalTransform.OfPoint(line.GetEndPoint(0)),
@@ -224,9 +206,8 @@ namespace ConvertCAD
                                     ));
                             }
                         }
-                        else
+                        else if (insObj is Line line) // skip arcs, circles, text on the same layer
                         {
-                            Line line = insObj as Line;
                             axesObjs.Add(
                                 Line.CreateBound(
                                     totalTransform.OfPoint(line.GetEndPoint(0)),
@@ -353,7 +334,7 @@ namespace ConvertCAD
                 }
             }
 
-            trans = new Transaction(document, "生成墙");
+            trans = new Transaction(document, Lang.T("Create Walls", "إنشاء حوائط"));
             trans.Start();
             foreach (WS ws in WSlist)
             {
@@ -521,7 +502,7 @@ namespace ConvertCAD
             */
 
             List<Point> endPoints = new List<Point>();
-            trans = new Transaction(document, "生成窗");
+            trans = new Transaction(document, Lang.T("Create Windows", "إنشاء شبابيك"));
             trans.Start();
             foreach (List<Line> horizontalSplitWindow in horizontalSplitWindows)
             {
@@ -611,12 +592,12 @@ namespace ConvertCAD
             }
             trans.Commit();
 
-            trans = new Transaction(document, "生成轴网");
+            trans = new Transaction(document, Lang.T("Create Grids", "إنشاء محاور"));
             trans.Start();
             ElementPositionUtils.CreateAxes(document, axesObjs);
             trans.Commit();
 
-            trans = new Transaction(document, "生成门");
+            trans = new Transaction(document, Lang.T("Create Doors", "إنشاء أبواب"));
             trans.Start();
             foreach (GeometryObject geo in doorsObjs)
             {
@@ -640,6 +621,11 @@ namespace ConvertCAD
 
             return Result.Succeeded;
         }
+
+        static bool LayerIs(string layer, params string[] names)
+        {
+            return names.Any(n => string.Equals(layer, n, StringComparison.OrdinalIgnoreCase));
+        }
     }
 
     [Transaction(TransactionMode.Manual)]
@@ -653,7 +639,7 @@ namespace ConvertCAD
 
             Reference refer = uidoc.Selection.PickObject(
                 ObjectType.PointOnElement,
-                "请拾取CAD链接中的墙");   // 拾取CAD链接
+                Lang.T("Pick the WALL layer in the linked CAD", "اختر طبقة الحوائط في ملف الكاد"));   // 拾取CAD链接
 
             Element element = document.GetElement(refer);
             GeometryElement geoElem = element.get_Geometry(new Options());
@@ -680,10 +666,11 @@ namespace ConvertCAD
             {
                 //只取第一个元素
                 GeometryInstance geomInstance = gObj as GeometryInstance;
-                Transform transform = geomInstance.Transform;
-                foreach (var insObj in geomInstance.SymbolGeometry)
+                if (geomInstance == null) continue;
+                foreach (var (insObj, transform) in CadGeometry.Flatten(geomInstance.SymbolGeometry, geomInstance.Transform))
                 {
-                    Category insCategory = (document.GetElement(insObj.GraphicsStyleId) as GraphicsStyle).GraphicsStyleCategory;
+                    Category insCategory = CadGeometry.CategoryOf(document, insObj);
+                    if (insCategory == null) continue;
                     if (targetCategory.Id == insCategory.Id)
                     {
                         if (insObj.GetType().ToString() == "Autodesk.Revit.DB.PolyLine")
@@ -698,9 +685,8 @@ namespace ConvertCAD
                                     ));
                             }
                         }
-                        else
+                        else if (insObj is Line line) // skip arcs, circles, text on the same layer
                         {
-                            Line line = insObj as Line;
                             wallsObjs.Add(
                                 Line.CreateBound(
                                     transform.OfPoint(line.GetEndPoint(0)),
@@ -814,7 +800,7 @@ namespace ConvertCAD
 
 
             //ElementPositionUtils.PrintLineList(WallAxis);
-            Transaction trans = new Transaction(document, "生成墙");
+            Transaction trans = new Transaction(document, Lang.T("Create Walls", "إنشاء حوائط"));
             trans.Start();
             Level level = document.ActiveView.GenLevel;
             foreach (WS ws in WSlist)
@@ -890,7 +876,7 @@ namespace ConvertCAD
 
             Reference refer = uidoc.Selection.PickObject(
                 ObjectType.PointOnElement,
-                "请拾取CAD链接中的窗户");   // 拾取CAD链接
+                Lang.T("Pick the WINDOW layer in the linked CAD", "اختر طبقة الشبابيك في ملف الكاد"));   // 拾取CAD链接
 
             Element element = document.GetElement(refer);
             GeometryElement geoElem = element.get_Geometry(new Options());
@@ -917,10 +903,11 @@ namespace ConvertCAD
             {
                 //只取第一个元素
                 GeometryInstance geomInstance = gObj as GeometryInstance;
-                Transform transform = geomInstance.Transform;
-                foreach (var insObj in geomInstance.SymbolGeometry)
+                if (geomInstance == null) continue;
+                foreach (var (insObj, transform) in CadGeometry.Flatten(geomInstance.SymbolGeometry, geomInstance.Transform))
                 {
-                    Category insCategory = (document.GetElement(insObj.GraphicsStyleId) as GraphicsStyle).GraphicsStyleCategory;
+                    Category insCategory = CadGeometry.CategoryOf(document, insObj);
+                    if (insCategory == null) continue;
                     if (targetCategory.Id == insCategory.Id)
                     {
                         if (insObj.GetType().ToString() == "Autodesk.Revit.DB.PolyLine")
@@ -935,9 +922,8 @@ namespace ConvertCAD
                                     ));
                             }
                         }
-                        else
+                        else if (insObj is Line line) // skip arcs, circles, text on the same layer
                         {
-                            Line line = insObj as Line;
                             windowsObjs.Add(
                                 Line.CreateBound(
                                     transform.OfPoint(line.GetEndPoint(0)),
@@ -1057,7 +1043,7 @@ namespace ConvertCAD
             
 
             List<Point> endPoints = new List<Point>();
-            Transaction trans = new Transaction(document, "生成窗");
+            Transaction trans = new Transaction(document, Lang.T("Create Windows", "إنشاء شبابيك"));
             trans.Start();
             Level level = document.ActiveView.GenLevel;
             foreach (List<Line> horizontalSplitWindow in horizontalSplitWindows)
@@ -1162,7 +1148,7 @@ namespace ConvertCAD
 
             Reference refer = uidoc.Selection.PickObject(
                 ObjectType.PointOnElement,
-                "请拾取CAD链接中的轴线");   // 拾取CAD链接
+                Lang.T("Pick the AXIS layer in the linked CAD", "اختر طبقة المحاور في ملف الكاد"));   // 拾取CAD链接
 
             Element element = document.GetElement(refer);
             GeometryElement geoElem = element.get_Geometry(new Options());
@@ -1189,10 +1175,11 @@ namespace ConvertCAD
             {
                 //只取第一个元素
                 GeometryInstance geomInstance = gObj as GeometryInstance;
-                Transform transform = geomInstance.Transform;
-                foreach (var insObj in geomInstance.SymbolGeometry)
+                if (geomInstance == null) continue;
+                foreach (var (insObj, transform) in CadGeometry.Flatten(geomInstance.SymbolGeometry, geomInstance.Transform))
                 {
-                    Category insCategory = (document.GetElement(insObj.GraphicsStyleId) as GraphicsStyle).GraphicsStyleCategory;
+                    Category insCategory = CadGeometry.CategoryOf(document, insObj);
+                    if (insCategory == null) continue;
                     if (targetCategory.Id == insCategory.Id)
                     {
                         if (insObj.GetType().ToString() == "Autodesk.Revit.DB.PolyLine")
@@ -1207,9 +1194,8 @@ namespace ConvertCAD
                                     ));
                             }
                         }
-                        else
+                        else if (insObj is Line line) // skip arcs, circles, text on the same layer
                         {
-                            Line line = insObj as Line;
                             axesObjs.Add(
                                 Line.CreateBound(
                                     transform.OfPoint(line.GetEndPoint(0)),
@@ -1221,7 +1207,7 @@ namespace ConvertCAD
                 }
             }
 
-            Transaction trans = new Transaction(document, "生成轴网");
+            Transaction trans = new Transaction(document, Lang.T("Create Grids", "إنشاء محاور"));
             trans.Start();
             ElementPositionUtils.CreateAxes(document, axesObjs);
             trans.Commit();
@@ -1240,7 +1226,7 @@ namespace ConvertCAD
 
             Reference refer = uidoc.Selection.PickObject(
                 ObjectType.PointOnElement,
-                "请拾取CAD链接中的柱");   // 拾取CAD链接
+                Lang.T("Pick the COLUMN layer in the linked CAD", "اختر طبقة الأعمدة في ملف الكاد"));   // 拾取CAD链接
 
             Element element = document.GetElement(refer);
             GeometryElement geoElem = element.get_Geometry(new Options());
@@ -1261,17 +1247,18 @@ namespace ConvertCAD
                 return Result.Failed;   // 未匹配
             }
 
-            Transaction trans = new Transaction(document, "创建柱");
+            Transaction trans = new Transaction(document, Lang.T("Create Columns", "إنشاء أعمدة"));
             trans.Start();
             Level level = document.ActiveView.GenLevel;
             foreach (GeometryObject gObj in geoElem)
             {
                 //只取第一个元素
                 GeometryInstance geomInstance = gObj as GeometryInstance;
-                Transform transform = geomInstance.Transform;
-                foreach (var insObj in geomInstance.SymbolGeometry)
+                if (geomInstance == null) continue;
+                foreach (var (insObj, transform) in CadGeometry.Flatten(geomInstance.SymbolGeometry, geomInstance.Transform))
                 {
-                    Category insCategory = (document.GetElement(insObj.GraphicsStyleId) as GraphicsStyle).GraphicsStyleCategory;
+                    Category insCategory = CadGeometry.CategoryOf(document, insObj);
+                    if (insCategory == null) continue;
                     if (targetCategory.Id == insCategory.Id)
                     {
                         if (insObj.GetType().ToString() == "Autodesk.Revit.DB.PolyLine")
@@ -1304,7 +1291,7 @@ namespace ConvertCAD
 
             Reference refer = uidoc.Selection.PickObject(
                 ObjectType.PointOnElement,
-                "请拾取CAD链接中的门");   // 拾取CAD链接
+                Lang.T("Pick the DOOR layer in the linked CAD", "اختر طبقة الأبواب في ملف الكاد"));   // 拾取CAD链接
 
             Element element = document.GetElement(refer);
             GeometryElement geoElem = element.get_Geometry(new Options());
@@ -1331,10 +1318,11 @@ namespace ConvertCAD
             {
                 //只取第一个元素
                 GeometryInstance geomInstance = gObj as GeometryInstance;
-                Transform totalTransform = geomInstance.Transform;
-                foreach (var insObj in geomInstance.SymbolGeometry)
+                if (geomInstance == null) continue;
+                foreach (var (insObj, totalTransform) in CadGeometry.Flatten(geomInstance.SymbolGeometry, geomInstance.Transform))
                 {
-                    Category insCategory = (document.GetElement(insObj.GraphicsStyleId) as GraphicsStyle).GraphicsStyleCategory;
+                    Category insCategory = CadGeometry.CategoryOf(document, insObj);
+                    if (insCategory == null) continue;
                     if (targetCategory.Id == insCategory.Id)
                     {
                         if (insObj.GetType().ToString() == "Autodesk.Revit.DB.GeometryInstance")
@@ -1386,7 +1374,7 @@ namespace ConvertCAD
 
             refer = uidoc.Selection.PickObject(
                 ObjectType.PointOnElement,
-                "请拾取CAD链接中的墙");   // 拾取CAD链接
+                Lang.T("Pick the WALL layer in the linked CAD", "اختر طبقة الحوائط في ملف الكاد"));   // 拾取CAD链接
 
             element = document.GetElement(refer);
             geoElem = element.get_Geometry(new Options());
@@ -1413,10 +1401,11 @@ namespace ConvertCAD
             {
                 //只取第一个元素
                 GeometryInstance geomInstance = gObj as GeometryInstance;
-                Transform transform = geomInstance.Transform;
-                foreach (var insObj in geomInstance.SymbolGeometry)
+                if (geomInstance == null) continue;
+                foreach (var (insObj, transform) in CadGeometry.Flatten(geomInstance.SymbolGeometry, geomInstance.Transform))
                 {
-                    Category insCategory = (document.GetElement(insObj.GraphicsStyleId) as GraphicsStyle).GraphicsStyleCategory;
+                    Category insCategory = CadGeometry.CategoryOf(document, insObj);
+                    if (insCategory == null) continue;
                     if (targetCategory.Id == insCategory.Id)
                     {
                         if (insObj.GetType().ToString() == "Autodesk.Revit.DB.PolyLine")
@@ -1431,9 +1420,8 @@ namespace ConvertCAD
                                     ));
                             }
                         }
-                        else
+                        else if (insObj is Line line) // skip arcs, circles, text on the same layer
                         {
-                            Line line = insObj as Line;
                             wallsObjs.Add(
                                 Line.CreateBound(
                                     transform.OfPoint(line.GetEndPoint(0)),
@@ -1445,7 +1433,7 @@ namespace ConvertCAD
                 }
             }
 
-            Transaction trans = new Transaction(document, "生成门");
+            Transaction trans = new Transaction(document, Lang.T("Create Doors", "إنشاء أبواب"));
             trans.Start();
             Level level = document.ActiveView.GenLevel;
             foreach (GeometryObject geo in doorsObjs)
@@ -1468,6 +1456,33 @@ namespace ConvertCAD
             }
             trans.Commit();
             return Result.Succeeded;
+        }
+    }
+
+    // CAD imports can contain blocks (nested GeometryInstances). Return each block, then walk into it
+    // with the combined transform; the old loop never looked inside and crashed on objects with no layer.
+    public static class CadGeometry
+    {
+        public static IEnumerable<(GeometryObject, Transform)> Flatten(GeometryElement geometry, Transform transform)
+        {
+            foreach (GeometryObject obj in geometry)
+            {
+                if (obj is GeometryInstance block)
+                {
+                    yield return (obj, transform); // door code reads whole blocks on the door layer
+                    foreach (var inner in Flatten(block.SymbolGeometry, transform.Multiply(block.Transform)))
+                        yield return inner;
+                }
+                else
+                {
+                    yield return (obj, transform);
+                }
+            }
+        }
+
+        public static Category CategoryOf(Document document, GeometryObject obj)
+        {
+            return (document.GetElement(obj.GraphicsStyleId) as GraphicsStyle)?.GraphicsStyleCategory;
         }
     }
 
@@ -1548,26 +1563,40 @@ namespace ConvertCAD
             return l1.Distance(l2.GetEndPoint(0));
         }
 
+        // All types of the named family (Chinese or English template); clear error if it isn't loaded.
+        static List<T> TypesOfFamily<T>(Document document, params string[] familyNames) where T : ElementType
+        {
+            List<T> types = new FilteredElementCollector(document).OfClass(typeof(T)).Cast<T>()
+                .Where(t => familyNames.Contains(t.FamilyName)).ToList();
+            if (types.Count == 0)
+                throw new InvalidOperationException(Lang.T(
+                    "Load one of these families into the project first: ",
+                    "حمّل إحدى هذه العائلات في المشروع أولاً: ") + string.Join(" / ", familyNames));
+            return types;
+        }
+
+        static void SetParam(Element e, double value, params string[] names)
+        {
+            foreach (string n in names)
+            {
+                Parameter p = e.LookupParameter(n);
+                if (p != null) { p.Set(value); return; }
+            }
+            throw new InvalidOperationException(Lang.T("Parameter not found: ", "البارامتر غير موجود: ") + string.Join(" / ", names));
+        }
+
         public static Wall CreateWall(Document document, Line axisLine, Level level, double width, double height, double offset)
         {
-            FilteredElementCollector filter = new FilteredElementCollector(document);
-            filter.OfClass(typeof(WallType));
-            string attr = "常规 - " + Math.Round(width * 304.8, 3).ToString() + "mm";
-            List<WallType> familySymbols = new List<WallType>();
-            foreach (WallType familySymbol in filter)
-            {
-                if (familySymbol.GetParameters("族名称")[0].AsString() == "基本墙")
-                {
-                    familySymbols.Add(familySymbol);
-                }
-            }
+            string mm = Math.Round(width * 304.8, 3).ToString() + "mm";
+            string attr = "Generic - " + mm;
+            List<WallType> familySymbols = TypesOfFamily<WallType>(document, "基本墙", "Basic Wall");
 
             int i;
             bool bo = false;
             int j = 0;
             for (i = 0; i < familySymbols.Count; i++)
             {
-                if (attr == familySymbols[i].Name)
+                if (attr == familySymbols[i].Name || "常规 - " + mm == familySymbols[i].Name)
                 {
                     bo = true;
                     j = i;
@@ -1579,11 +1608,8 @@ namespace ConvertCAD
             }
             else
             {
-                for (i = 0; i < familySymbols.Count; i++)
-                {
-                    if ("常规 - 200mm" == familySymbols[i].Name) { break; }
-                }
-                WallType fam = familySymbols[i];
+                WallType fam = familySymbols.FirstOrDefault(t => t.Name == "常规 - 200mm" || t.Name == "Generic - 200mm")
+                               ?? familySymbols[0];
                 WallType coluType = fam.Duplicate(attr) as WallType;
                 CompoundStructure cs = coluType.GetCompoundStructure();
                 int layerIndex = cs.GetFirstCoreLayerIndex();
@@ -1595,17 +1621,8 @@ namespace ConvertCAD
 
         public static void CreateColumn(Document document, XYZ center, Level level, double b, double h)
         {
-            FilteredElementCollector filter = new FilteredElementCollector(document);
-            filter.OfClass(typeof(FamilySymbol));
             string bh = Math.Round(b * 304.8, 3).ToString() + " " + "x" + " " + Math.Round(h * 304.8, 3).ToString() + "mm";
-            List<FamilySymbol> familySymbols = new List<FamilySymbol>();
-            foreach (FamilySymbol familySymbol in filter)
-            {
-                if (familySymbol.GetParameters("族名称")[0].AsString() == "混凝土 - 矩形 - 柱")
-                {
-                    familySymbols.Add(familySymbol);
-                }
-            }
+            List<FamilySymbol> familySymbols = TypesOfFamily<FamilySymbol>(document, "混凝土 - 矩形 - 柱", "M_Concrete-Rectangular-Column", "Concrete-Rectangular-Column");
 
             int i;
             bool bo = false;
@@ -1698,18 +1715,9 @@ namespace ConvertCAD
 
         public static void CreateWindow(Document document, XYZ center, double width, double height, Wall desWall, Level level)
         {
-            FilteredElementCollector filter = new FilteredElementCollector(document);
-            filter.OfClass(typeof(FamilySymbol));
             string bh = Math.Round(width * 304.8, 3).ToString() + " " + "x" + " " +
                         Math.Round(height * 304.8, 3).ToString() + "mm";
-            List<FamilySymbol> familySymbols = new List<FamilySymbol>();
-            foreach (FamilySymbol familySymbol in filter)
-            {
-                if (familySymbol.GetParameters("族名称")[0].AsString() == "固定")
-                {
-                    familySymbols.Add(familySymbol);
-                }
-            }
+            List<FamilySymbol> familySymbols = TypesOfFamily<FamilySymbol>(document, "固定", "M_Fixed", "Fixed");
 
             int i;
             bool bo = false;
@@ -1730,8 +1738,8 @@ namespace ConvertCAD
             {
                 FamilySymbol fam = familySymbols[0];
                 ElementType coluType = fam.Duplicate(bh);
-                coluType.GetParameters("宽度")[0].Set(width);
-                coluType.GetParameters("高度")[0].Set(height);
+                SetParam(coluType, width, "宽度", "Width");
+                SetParam(coluType, height, "高度", "Height");
                 FamilySymbol fs = coluType as FamilySymbol;
                 document.Create.NewFamilyInstance(center, fs, desWall, level, StructuralType.NonStructural);
             }
@@ -1739,18 +1747,9 @@ namespace ConvertCAD
 
         public static void CreateDoor(Document document, XYZ center, double width, double height, Wall desWall, Level level)
         {
-            FilteredElementCollector filter = new FilteredElementCollector(document);
-            filter.OfClass(typeof(FamilySymbol));
             string bh = Math.Round(width * 304.8, 3).ToString() + " " + "x" + " " +
                         Math.Round(height * 304.8, 3).ToString() + "mm";
-            List<FamilySymbol> familySymbols = new List<FamilySymbol>();
-            foreach (FamilySymbol familySymbol in filter)
-            {
-                if (familySymbol.GetParameters("族名称")[0].AsString() == "单扇 - 与墙齐")
-                {
-                    familySymbols.Add(familySymbol);
-                }
-            }
+            List<FamilySymbol> familySymbols = TypesOfFamily<FamilySymbol>(document, "单扇 - 与墙齐", "M_Single-Flush", "Single-Flush");
 
             int i;
             bool bo = false;
@@ -1771,8 +1770,8 @@ namespace ConvertCAD
             {
                 FamilySymbol fam = familySymbols[0];
                 ElementType coluType = fam.Duplicate(bh);
-                coluType.GetParameters("宽度")[0].Set(width);
-                coluType.GetParameters("高度")[0].Set(height);
+                SetParam(coluType, width, "宽度", "Width");
+                SetParam(coluType, height, "高度", "Height");
                 FamilySymbol fs = coluType as FamilySymbol;
                 document.Create.NewFamilyInstance(center, fs, desWall, level, StructuralType.NonStructural);
             }

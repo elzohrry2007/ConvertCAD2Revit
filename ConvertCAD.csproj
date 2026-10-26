@@ -70,6 +70,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ConvertCAD2Revit.cs" />
+    <Compile Include="Lang.cs" />
     <Compile Include="Ribbon.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
