@@ -9,58 +9,91 @@ using Autodesk.Revit.UI;
 using Autodesk.Revit.DB;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using ConvertCAD;
 
 namespace Convert
 {
     [Transaction(TransactionMode.Manual)]
     public class Ribbon : IExternalApplication
     {
+        // Kept so the language button can relabel everything without restarting Revit.
+        static RibbonPanel panel;
+        static PushButton autoBtn, wallBtn, doorBtn, windowBtn, columnBtn, axisBtn, langBtn;
+
         public Result OnStartup(UIControlledApplication uiapp)
         {
             Assembly assembly = typeof(Ribbon).Assembly;
             string assemblyPath = assembly.Location;
 
-            uiapp.CreateRibbonTab("智能转换");
-            RibbonPanel panel = uiapp.CreateRibbonPanel("智能转换", "生成");
+            // Revit can't rename a tab after it is created, so its name is language-neutral.
+            uiapp.CreateRibbonTab("CAD2Revit");
+            panel = uiapp.CreateRibbonPanel("CAD2Revit", "Create");
 
-            PushButton create_auto = panel.AddItem(new PushButtonData("auto_define", "智能匹配", assemblyPath, "ConvertCAD.ConvertCAD2Revit")) as PushButton;
-            create_auto.LargeImage = GetEmbeddedImage(assembly, "ConvertCAD.Icons.auto.png");
-            create_auto.ToolTip = "按照图层名称信息自动匹配并创建三维模型。";
-
-            panel.AddSeparator();
-
-            PushButton create_wall = panel.AddItem(new PushButtonData("wall_define", "墙", assemblyPath, "ConvertCAD.ConvertWall2Revit")) as PushButton;
-            create_wall.LargeImage = GetEmbeddedImage(assembly, "ConvertCAD.Icons.wall.png");
-            create_wall.ToolTip = "选取墙图层，匹配并创建三维模型。";
+            autoBtn = panel.AddItem(new PushButtonData("auto_define", "Auto", assemblyPath, "ConvertCAD.ConvertCAD2Revit")) as PushButton;
+            autoBtn.LargeImage = GetEmbeddedImage(assembly, "ConvertCAD.Icons.auto.png");
 
             panel.AddSeparator();
 
-            PushButton create_door = panel.AddItem(new PushButtonData("door_define", "门", assemblyPath, "ConvertCAD.ConvertDoor2Revit")) as PushButton;
-            create_door.LargeImage = GetEmbeddedImage(assembly, "ConvertCAD.Icons.door.png");
-            create_door.ToolTip = "先选取门图层，再选取墙图层，匹配并创建三维模型。";
+            wallBtn = panel.AddItem(new PushButtonData("wall_define", "Wall", assemblyPath, "ConvertCAD.ConvertWall2Revit")) as PushButton;
+            wallBtn.LargeImage = GetEmbeddedImage(assembly, "ConvertCAD.Icons.wall.png");
 
             panel.AddSeparator();
 
-            PushButton create_window = panel.AddItem(new PushButtonData("window_define", "窗", assemblyPath, "ConvertCAD.ConvertWindow2Revit")) as PushButton;
-            create_window.LargeImage = GetEmbeddedImage(assembly, "ConvertCAD.Icons.window.png");
-            create_window.ToolTip = "选取窗图层，匹配并创建三维模型。";
+            doorBtn = panel.AddItem(new PushButtonData("door_define", "Door", assemblyPath, "ConvertCAD.ConvertDoor2Revit")) as PushButton;
+            doorBtn.LargeImage = GetEmbeddedImage(assembly, "ConvertCAD.Icons.door.png");
 
             panel.AddSeparator();
 
-            PushButton create_column = panel.AddItem(new PushButtonData("column_define", "柱", assemblyPath, "ConvertCAD.ConvertColumn2Revit")) as PushButton;
-            create_column.LargeImage = GetEmbeddedImage(assembly, "ConvertCAD.Icons.column.png");
-            create_column.ToolTip = "选取柱图层，匹配并创建三维模型。";
+            windowBtn = panel.AddItem(new PushButtonData("window_define", "Window", assemblyPath, "ConvertCAD.ConvertWindow2Revit")) as PushButton;
+            windowBtn.LargeImage = GetEmbeddedImage(assembly, "ConvertCAD.Icons.window.png");
 
             panel.AddSeparator();
 
-            PushButton create_axes = panel.AddItem(new PushButtonData("axex_define", "轴", assemblyPath, "ConvertCAD.ConvertAxis2Revit")) as PushButton;            
-            create_axes.LargeImage = GetEmbeddedImage(assembly, "ConvertCAD.Icons.axis.png");
-            create_axes.ToolTip = "选取轴线图层，匹配并创建三维模型。";
+            columnBtn = panel.AddItem(new PushButtonData("column_define", "Column", assemblyPath, "ConvertCAD.ConvertColumn2Revit")) as PushButton;
+            columnBtn.LargeImage = GetEmbeddedImage(assembly, "ConvertCAD.Icons.column.png");
 
             panel.AddSeparator();
 
+            axisBtn = panel.AddItem(new PushButtonData("axex_define", "Grid", assemblyPath, "ConvertCAD.ConvertAxis2Revit")) as PushButton;
+            axisBtn.LargeImage = GetEmbeddedImage(assembly, "ConvertCAD.Icons.axis.png");
+
+            panel.AddSeparator();
+
+            langBtn = panel.AddItem(new PushButtonData("lang_switch", "Language", assemblyPath, "ConvertCAD.SwitchLanguage")) as PushButton;
+
+            ApplyTexts();
             return Result.Succeeded;
         }
+
+        public static void ApplyTexts()
+        {
+            panel.Title = Lang.T("Create", "إنشاء");
+
+            autoBtn.ItemText = Lang.T("Auto Match", "مطابقة تلقائية");
+            autoBtn.ToolTip = Lang.T("Match CAD layers by name and create the 3D model automatically.",
+                                     "مطابقة طبقات الكاد بالاسم وإنشاء النموذج ثلاثي الأبعاد تلقائياً.");
+
+            wallBtn.ItemText = Lang.T("Wall", "حوائط");
+            wallBtn.ToolTip = Lang.T("Pick the wall layer to create walls.", "اختر طبقة الحوائط لإنشاء الحوائط.");
+
+            doorBtn.ItemText = Lang.T("Door", "أبواب");
+            doorBtn.ToolTip = Lang.T("Pick the door layer first, then the wall layer, to create doors.",
+                                     "اختر طبقة الأبواب أولاً ثم طبقة الحوائط لإنشاء الأبواب.");
+
+            windowBtn.ItemText = Lang.T("Window", "شبابيك");
+            windowBtn.ToolTip = Lang.T("Pick the window layer to create windows.", "اختر طبقة الشبابيك لإنشاء الشبابيك.");
+
+            columnBtn.ItemText = Lang.T("Column", "أعمدة");
+            columnBtn.ToolTip = Lang.T("Pick the column layer to create columns.", "اختر طبقة الأعمدة لإنشاء الأعمدة.");
+
+            axisBtn.ItemText = Lang.T("Grid", "محاور");
+            axisBtn.ToolTip = Lang.T("Pick the axis layer to create grids.", "اختر طبقة المحاور لإنشاء المحاور.");
+
+            // The button shows the language you will switch TO.
+            langBtn.ItemText = Lang.T("عربي", "English");
+            langBtn.ToolTip = Lang.T("Switch the interface to Arabic.", "تحويل الواجهة إلى الإنجليزية.");
+        }
+
         public Result OnShutdown(UIControlledApplication uiapp)
         {
             return Result.Succeeded;
