@@ -93,11 +93,11 @@ namespace ConvertCAD
             {
                 //只取第一个元素
                 GeometryInstance geomInstance = gObj as GeometryInstance;
-                Transform totalTransform = geomInstance.Transform;
-
-                foreach (var insObj in geomInstance.SymbolGeometry)
+                if (geomInstance == null) continue;
+                foreach (var (insObj, totalTransform) in CadGeometry.Flatten(geomInstance.SymbolGeometry, geomInstance.Transform))
                 {
-                    Category insCategory = (document.GetElement(insObj.GraphicsStyleId) as GraphicsStyle).GraphicsStyleCategory;
+                    Category insCategory = CadGeometry.CategoryOf(document, insObj);
+                    if (insCategory == null) continue;
                     if (wallsCategory != null && wallsCategory.Id == insCategory.Id)
                     {
                         if (insObj.GetType().ToString() == "Autodesk.Revit.DB.PolyLine")
@@ -112,9 +112,8 @@ namespace ConvertCAD
                                     ));
                             }
                         }
-                        else
+                        else if (insObj is Line line) // skip arcs, circles, text on the same layer
                         {
-                            Line line = insObj as Line;
                             wallsObjs.Add(
                                 Line.CreateBound(
                                     totalTransform.OfPoint(line.GetEndPoint(0)),
@@ -137,9 +136,8 @@ namespace ConvertCAD
                                     ));
                             }
                         }
-                        else
+                        else if (insObj is Line line) // skip arcs, circles, text on the same layer
                         {
-                            Line line = insObj as Line;
                             windowsObjs.Add(
                                 Line.CreateBound(
                                     totalTransform.OfPoint(line.GetEndPoint(0)),
@@ -208,9 +206,8 @@ namespace ConvertCAD
                                     ));
                             }
                         }
-                        else
+                        else if (insObj is Line line) // skip arcs, circles, text on the same layer
                         {
-                            Line line = insObj as Line;
                             axesObjs.Add(
                                 Line.CreateBound(
                                     totalTransform.OfPoint(line.GetEndPoint(0)),
@@ -669,10 +666,11 @@ namespace ConvertCAD
             {
                 //只取第一个元素
                 GeometryInstance geomInstance = gObj as GeometryInstance;
-                Transform transform = geomInstance.Transform;
-                foreach (var insObj in geomInstance.SymbolGeometry)
+                if (geomInstance == null) continue;
+                foreach (var (insObj, transform) in CadGeometry.Flatten(geomInstance.SymbolGeometry, geomInstance.Transform))
                 {
-                    Category insCategory = (document.GetElement(insObj.GraphicsStyleId) as GraphicsStyle).GraphicsStyleCategory;
+                    Category insCategory = CadGeometry.CategoryOf(document, insObj);
+                    if (insCategory == null) continue;
                     if (targetCategory.Id == insCategory.Id)
                     {
                         if (insObj.GetType().ToString() == "Autodesk.Revit.DB.PolyLine")
@@ -687,9 +685,8 @@ namespace ConvertCAD
                                     ));
                             }
                         }
-                        else
+                        else if (insObj is Line line) // skip arcs, circles, text on the same layer
                         {
-                            Line line = insObj as Line;
                             wallsObjs.Add(
                                 Line.CreateBound(
                                     transform.OfPoint(line.GetEndPoint(0)),
@@ -906,10 +903,11 @@ namespace ConvertCAD
             {
                 //只取第一个元素
                 GeometryInstance geomInstance = gObj as GeometryInstance;
-                Transform transform = geomInstance.Transform;
-                foreach (var insObj in geomInstance.SymbolGeometry)
+                if (geomInstance == null) continue;
+                foreach (var (insObj, transform) in CadGeometry.Flatten(geomInstance.SymbolGeometry, geomInstance.Transform))
                 {
-                    Category insCategory = (document.GetElement(insObj.GraphicsStyleId) as GraphicsStyle).GraphicsStyleCategory;
+                    Category insCategory = CadGeometry.CategoryOf(document, insObj);
+                    if (insCategory == null) continue;
                     if (targetCategory.Id == insCategory.Id)
                     {
                         if (insObj.GetType().ToString() == "Autodesk.Revit.DB.PolyLine")
@@ -924,9 +922,8 @@ namespace ConvertCAD
                                     ));
                             }
                         }
-                        else
+                        else if (insObj is Line line) // skip arcs, circles, text on the same layer
                         {
-                            Line line = insObj as Line;
                             windowsObjs.Add(
                                 Line.CreateBound(
                                     transform.OfPoint(line.GetEndPoint(0)),
@@ -1178,10 +1175,11 @@ namespace ConvertCAD
             {
                 //只取第一个元素
                 GeometryInstance geomInstance = gObj as GeometryInstance;
-                Transform transform = geomInstance.Transform;
-                foreach (var insObj in geomInstance.SymbolGeometry)
+                if (geomInstance == null) continue;
+                foreach (var (insObj, transform) in CadGeometry.Flatten(geomInstance.SymbolGeometry, geomInstance.Transform))
                 {
-                    Category insCategory = (document.GetElement(insObj.GraphicsStyleId) as GraphicsStyle).GraphicsStyleCategory;
+                    Category insCategory = CadGeometry.CategoryOf(document, insObj);
+                    if (insCategory == null) continue;
                     if (targetCategory.Id == insCategory.Id)
                     {
                         if (insObj.GetType().ToString() == "Autodesk.Revit.DB.PolyLine")
@@ -1196,9 +1194,8 @@ namespace ConvertCAD
                                     ));
                             }
                         }
-                        else
+                        else if (insObj is Line line) // skip arcs, circles, text on the same layer
                         {
-                            Line line = insObj as Line;
                             axesObjs.Add(
                                 Line.CreateBound(
                                     transform.OfPoint(line.GetEndPoint(0)),
@@ -1257,10 +1254,11 @@ namespace ConvertCAD
             {
                 //只取第一个元素
                 GeometryInstance geomInstance = gObj as GeometryInstance;
-                Transform transform = geomInstance.Transform;
-                foreach (var insObj in geomInstance.SymbolGeometry)
+                if (geomInstance == null) continue;
+                foreach (var (insObj, transform) in CadGeometry.Flatten(geomInstance.SymbolGeometry, geomInstance.Transform))
                 {
-                    Category insCategory = (document.GetElement(insObj.GraphicsStyleId) as GraphicsStyle).GraphicsStyleCategory;
+                    Category insCategory = CadGeometry.CategoryOf(document, insObj);
+                    if (insCategory == null) continue;
                     if (targetCategory.Id == insCategory.Id)
                     {
                         if (insObj.GetType().ToString() == "Autodesk.Revit.DB.PolyLine")
@@ -1320,10 +1318,11 @@ namespace ConvertCAD
             {
                 //只取第一个元素
                 GeometryInstance geomInstance = gObj as GeometryInstance;
-                Transform totalTransform = geomInstance.Transform;
-                foreach (var insObj in geomInstance.SymbolGeometry)
+                if (geomInstance == null) continue;
+                foreach (var (insObj, totalTransform) in CadGeometry.Flatten(geomInstance.SymbolGeometry, geomInstance.Transform))
                 {
-                    Category insCategory = (document.GetElement(insObj.GraphicsStyleId) as GraphicsStyle).GraphicsStyleCategory;
+                    Category insCategory = CadGeometry.CategoryOf(document, insObj);
+                    if (insCategory == null) continue;
                     if (targetCategory.Id == insCategory.Id)
                     {
                         if (insObj.GetType().ToString() == "Autodesk.Revit.DB.GeometryInstance")
@@ -1402,10 +1401,11 @@ namespace ConvertCAD
             {
                 //只取第一个元素
                 GeometryInstance geomInstance = gObj as GeometryInstance;
-                Transform transform = geomInstance.Transform;
-                foreach (var insObj in geomInstance.SymbolGeometry)
+                if (geomInstance == null) continue;
+                foreach (var (insObj, transform) in CadGeometry.Flatten(geomInstance.SymbolGeometry, geomInstance.Transform))
                 {
-                    Category insCategory = (document.GetElement(insObj.GraphicsStyleId) as GraphicsStyle).GraphicsStyleCategory;
+                    Category insCategory = CadGeometry.CategoryOf(document, insObj);
+                    if (insCategory == null) continue;
                     if (targetCategory.Id == insCategory.Id)
                     {
                         if (insObj.GetType().ToString() == "Autodesk.Revit.DB.PolyLine")
@@ -1420,9 +1420,8 @@ namespace ConvertCAD
                                     ));
                             }
                         }
-                        else
+                        else if (insObj is Line line) // skip arcs, circles, text on the same layer
                         {
-                            Line line = insObj as Line;
                             wallsObjs.Add(
                                 Line.CreateBound(
                                     transform.OfPoint(line.GetEndPoint(0)),
@@ -1457,6 +1456,33 @@ namespace ConvertCAD
             }
             trans.Commit();
             return Result.Succeeded;
+        }
+    }
+
+    // CAD imports can contain blocks (nested GeometryInstances). Return each block, then walk into it
+    // with the combined transform; the old loop never looked inside and crashed on objects with no layer.
+    public static class CadGeometry
+    {
+        public static IEnumerable<(GeometryObject, Transform)> Flatten(GeometryElement geometry, Transform transform)
+        {
+            foreach (GeometryObject obj in geometry)
+            {
+                if (obj is GeometryInstance block)
+                {
+                    yield return (obj, transform); // door code reads whole blocks on the door layer
+                    foreach (var inner in Flatten(block.SymbolGeometry, transform.Multiply(block.Transform)))
+                        yield return inner;
+                }
+                else
+                {
+                    yield return (obj, transform);
+                }
+            }
+        }
+
+        public static Category CategoryOf(Document document, GeometryObject obj)
+        {
+            return (document.GetElement(obj.GraphicsStyleId) as GraphicsStyle)?.GraphicsStyleCategory;
         }
     }
 
