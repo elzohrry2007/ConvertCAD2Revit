@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copy this file to %APPDATA%\Autodesk\Revit\Addins\2027\ and the build output to ...\Addins\2027\ConvertCAD\ -->
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>ConvertCAD2Revit</Name>
+    <Assembly>ConvertCAD\ConvertCAD.dll</Assembly>
+    <FullClassName>Convert.Ribbon</FullClassName>
+    <AddInId>9fb472da-45b5-44f0-88ca-05dddc531839</AddInId>
+    <VendorId>ELZOHRY</VendorId>
+    <VendorDescription>ConvertCAD2Revit</VendorDescription>
+  </AddIn>
+</RevitAddIns>
